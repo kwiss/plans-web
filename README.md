@@ -5,11 +5,16 @@ Markdown plans rendered as styled HTML, served by a micro Bun server, with a URL
 ## Install
 
 ```bash
-git clone git@github.com:kwiss/plans-web.git ~/.claude/plans-web
-bash ~/.claude/plans-web/install.sh
+npx -y github:kwiss/plans-web
 ```
 
-Requires `bun` and `jq`. The installer symlinks the `plan` command into `~/.local/bin` and wires Claude Code hooks (`ExitPlanMode` → publish + URL) into `~/.claude/settings.json`.
+Same command updates an existing install (git pull + re-run installer). Requires `bun` and `jq`; the repo being private, git/gh auth is needed. Manual fallback:
+
+```bash
+gh repo clone kwiss/plans-web ~/.claude/plans-web && bash ~/.claude/plans-web/install.sh
+```
+
+The installer symlinks the `plan` command into `~/.local/bin` and wires Claude Code hooks (`ExitPlanMode` → publish + URL) into `~/.claude/settings.json`.
 
 ## How it works
 
@@ -24,7 +29,7 @@ Requires `bun` and `jq`. The installer symlinks the `plan` command into `~/.loca
 From inside a project repo:
 
 ```bash
-bash ~/.claude/plans-web/install.sh --project
+npx -y github:kwiss/plans-web --project
 git add .claude/settings.json && git commit
 ```
 

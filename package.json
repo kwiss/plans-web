@@ -1,0 +1,8 @@
+{
+  "name": "plans-web",
+  "version": "1.0.0",
+  "description": "Markdown plans rendered as HTML with auto-served review URLs",
+  "bin": { "plans-web": "bin/bootstrap.sh" },
+  "repository": "github:kwiss/plans-web",
+  "license": "MIT"
+}
