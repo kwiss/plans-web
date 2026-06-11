@@ -131,16 +131,7 @@ function themeCss(t: Theme): string {
 
 // ---------- rendering ----------
 
-function htmlTemplate(md: string, title: string, project: string, date: string, theme: Theme = {}): string {
-  // JSON-encode the markdown and break "</" so it can never terminate the <script>.
-  const escaped = JSON.stringify(md).replace(/<\//g, "<\\/");
-  const hasMermaid = md.includes("```mermaid");
-  return `<!doctype html><html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${title.replace(/</g, "&lt;")}</title>
-<link rel="stylesheet" href="/assets/github.min.css" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="/assets/github-dark.min.css" media="(prefers-color-scheme: dark)">
-<style>
+const BASE_CSS = `
 :root{color-scheme:light dark}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;max-width:880px;margin:0 auto;padding:2rem 1.5rem;line-height:1.6;background:light-dark(#fff,#0d1117);color:light-dark(#1f2328,#e6edf3)}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;border-bottom:1px solid light-dark(#d1d9e0,#30363d);padding-bottom:.6rem;margin-bottom:1.5rem;font-size:.85rem;color:light-dark(#59636e,#9198a1)}
@@ -156,13 +147,31 @@ table{border-collapse:collapse;width:100%;margin:1rem 0}
 th,td{border:1px solid light-dark(#d1d9e0,#30363d);padding:.4rem .7rem;text-align:left}
 th{background:light-dark(#f6f8fa,#161b22)}
 blockquote{border-left:4px solid light-dark(#d1d9e0,#30363d);margin:0;padding:0 1rem;color:light-dark(#59636e,#9198a1)}
-input[type=checkbox]{margin-right:.4rem}
-</style>
-${themeCss(theme)}
+input[type=checkbox]{margin-right:.4rem}`;
+
+function htmlHead(title: string, theme: Theme): string {
+  return `<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title.replace(/</g, "&lt;")}</title>
+<link rel="stylesheet" href="/assets/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="/assets/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<style>${BASE_CSS}</style>
+${themeCss(theme)}`;
+}
+
+function htmlHeader(project: string, date: string, themed: boolean): string {
+  return `<header><span><a href="/">← plans</a> · ${project.replace(/</g, "&lt;")}${themed ? " · DESIGN.md" : ""}</span><span>${date}</span></header>`;
+}
+
+function htmlTemplate(md: string, title: string, project: string, date: string, theme: Theme = {}): string {
+  // JSON-encode the markdown and break "</" so it can never terminate the <script>.
+  const escaped = JSON.stringify(md).replace(/<\//g, "<\\/");
+  const hasMermaid = md.includes("\`\`\`mermaid");
+  return `${htmlHead(title, theme)}
 <script src="/assets/marked.min.js"></script>
 <script src="/assets/highlight.min.js"></script>
 </head><body>
-<header><span><a href="/">← plans</a> · ${project.replace(/</g, "&lt;")}${Object.keys(theme).length ? " · DESIGN.md" : ""}</span><span>${date}</span></header>
+${htmlHeader(project, date, Object.keys(theme).length > 0)}
 <main id="content"></main>
 <script>
 const md = ${escaped};
@@ -180,6 +189,43 @@ import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")
   .then((m) => m.default.run({ querySelector: ".mermaid" }))
   .catch(() => {});` : ""}
 </script>
+</body></html>`;
+}
+
+// HTML-first scaffold: agents WRITE the plan in HTML inside <main>.
+// Theme comes from the current project's DESIGN.md at scaffold time.
+function scaffold(title: string, project: string, date: string, theme: Theme): string {
+  return `${htmlHead(title, theme)}
+<script src="/assets/highlight.min.js"></script>
+</head><body>
+${htmlHeader(project, date, Object.keys(theme).length > 0)}
+<main>
+<h1>${title.replace(/</g, "&lt;")}</h1>
+
+<section>
+<h2>Context</h2>
+<p><!-- why this plan exists, current state --></p>
+</section>
+
+<section>
+<h2>Steps</h2>
+<ol>
+<li><!-- step --></li>
+</ol>
+</section>
+
+<section>
+<h2>Verification</h2>
+<ul>
+<li><!-- how we prove it works --></li>
+</ul>
+</section>
+
+<!-- Add sections as needed (risks, files touched, rollout).
+     Code samples: <pre><code class="language-ts">...</code></pre>
+     Tables, lists, links: plain HTML. -->
+</main>
+<script>document.querySelectorAll("pre code").forEach((el)=>{try{hljs.highlightElement(el)}catch{}});</script>
 </body></html>`;
 }
 
@@ -259,11 +305,29 @@ if (arg === "serve") {
     console.log(JSON.stringify({ systemMessage: `📋 Plan HTML → ${url}` }));
   } catch {}
   process.exit(0);
+} else if (arg === "template") {
+  const title = process.argv[3] || "Implementation Plan";
+  const design = findDesignFile(process.cwd());
+  const theme = design ? extractTheme(design) : {};
+  const date = new Date().toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" });
+  console.log(scaffold(title, basename(process.cwd()), date, theme));
 } else if (arg && existsSync(arg)) {
-  const md = readFileSync(arg, "utf8");
   await ensureServer();
-  console.log(publish(md, basename(arg), process.cwd()));
+  if (/\.html?$/.test(arg)) {
+    // HTML-first plan: publish as-is.
+    const html = readFileSync(arg, "utf8");
+    const title = html.match(/<title>(.*?)<\/title>/)?.[1]
+      || html.match(/<h1[^>]*>([^<]*)/)?.[1]?.trim()
+      || basename(arg).replace(/\.html?$/, "");
+    const file = `${new Date().toISOString().slice(0, 10)}-${slugify(title)}.html`;
+    mkdirSync(WEB_DIR, { recursive: true });
+    writeFileSync(join(WEB_DIR, file), html);
+    console.log(`${baseUrl()}/${file}`);
+  } else {
+    const md = readFileSync(arg, "utf8");
+    console.log(publish(md, basename(arg), process.cwd()));
+  }
 } else {
-  console.log("usage: plan <file.md> | serve | stop | ls | url | --from-hook");
+  console.log("usage: plan <file.html|file.md> | template [title] | serve | stop | ls | url | --from-hook");
   process.exit(arg ? 1 : 0);
 }

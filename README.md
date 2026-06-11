@@ -1,6 +1,6 @@
 # plans-web
 
-Markdown plans rendered as styled HTML, served by a micro Bun server, with a URL handed back at plan-review time. Works locally and over Tailscale on remote servers.
+**HTML-first plans.** Agents (Claude Code, Codex, …) write implementation plans directly in HTML — scaffolded by `plan template`, themed from the project's DESIGN.md — served by a micro Bun server, with a review URL handed back. A hook denies markdown plans in project plan dirs. Works locally and over Tailscale on remote servers.
 
 ## Install
 
@@ -18,8 +18,10 @@ The installer symlinks the `plan` command into `~/.local/bin` and wires Claude C
 
 ## How it works
 
-- **Claude Code**: hooks fire when a plan reaches review; the freshest `~/.claude/plans/*.md` is rendered to HTML here, the server is health-checked/auto-started, and the URL appears as a system message. Zero agent instructions, zero tokens.
-- **Codex / manual**: `plan <file.md>` → prints the URL. (`~/.codex/AGENTS.md` instructs Codex to do this after writing a plan.)
+- **HTML-first authoring**: `plan template "Title" > docs/plans/<slug>.html` scaffolds a themed standalone page; the agent writes the plan as HTML sections inside `<main>`, then `plan <file>.html` publishes it and prints the URL. The installer appends this rule to `~/.claude/CLAUDE.md` (and to the project `CLAUDE.md` with `--project`).
+- **Enforcement**: a `PreToolUse:Write` hook denies `.md` plan files in `docs/plans/`, `docs/test-plans/`, `.cursor/plans/`, `plans/` — the deny reason tells the agent the exact HTML workflow to use instead.
+- **Native Claude plan mode** (exception): the harness-owned plan file in `~/.claude/plans/*.md` stays markdown; hooks on `ExitPlanMode` render it to HTML at review time and emit the URL as a system message.
+- **Codex / manual**: `plan <file.html|file.md>` → prints the URL. (`~/.codex/AGENTS.md` instructs Codex to author HTML plans.)
 - **Server**: `plans-server.ts`, port `7878` (env `PLANS_PORT`), binds `0.0.0.0`, serves this directory with an index of all plans. Auto-started on demand; `plan serve` / `plan stop` for manual control.
 - **URL host**: `localhost` locally; over SSH it auto-uses the Tailscale IP (override with `PLANS_HOST`).
 - **Project theming**: if the project being planned has a `DESIGN.md` (or `design.md`, `docs/`, `.claude/`), labeled hex tokens (background / primary text / accent / border) and a font name are extracted and applied to the plan page in light mode. No design file → clean GitHub-style default.
@@ -38,11 +40,13 @@ This wires the same hooks into the project's **committed** `.claude/settings.jso
 ## Commands
 
 ```bash
-plan <file.md>   # publish a markdown file, print URL
-plan ls          # list published plan URLs (newest first)
-plan url         # base URL
-plan serve       # run server in foreground
-plan stop        # stop server
+plan template "Title"   # print a themed HTML scaffold (write it to docs/plans/<slug>.html)
+plan <file.html>        # publish an HTML plan as-is, print URL
+plan <file.md>          # render a legacy markdown file to HTML, print URL
+plan ls                 # list published plan URLs (newest first)
+plan url                # base URL
+plan serve              # run server in foreground
+plan stop               # stop server
 ```
 
 ## Server firewall (Ubuntu + UFW + Tailscale)
