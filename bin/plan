@@ -1,0 +1,4 @@
+#!/bin/bash
+# plan — publish markdown plans as HTML, serve them. See ~/.claude/plans-web/
+command -v bun >/dev/null 2>&1 || { echo "plan: bun not found" >&2; exit 1; }
+exec bun "$HOME/.claude/plans-web/plan-publish.ts" "$@"

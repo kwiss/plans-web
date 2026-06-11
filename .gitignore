@@ -1,0 +1,4 @@
+# generated plan pages + runtime state
+*.html
+.last-publish
+server.log
