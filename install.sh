@@ -27,7 +27,7 @@ if [ "${1:-}" = "--project" ]; then
     .hooks //= {} |
     .hooks.PreToolUse  = ([
       {matcher:"ExitPlanMode",hooks:[{type:"command",command:$cmd,timeout:15,statusMessage:"Publishing plan as HTML"}]},
-      {matcher:"Write",hooks:[{type:"command",command:$enf,timeout:10,statusMessage:"Checking plan format"}]}
+      {matcher:"Write|Bash",hooks:[{type:"command",command:$enf,timeout:10,statusMessage:"Checking plan format"}]}
     ] + (.hooks.PreToolUse  // [])) |
     .hooks.PostToolUse = ([{matcher:"ExitPlanMode",hooks:[{type:"command",command:$cmd,timeout:15,statusMessage:"Publishing plan as HTML"}]}] + (.hooks.PostToolUse // []))
   ' "$PROJ_SETTINGS" > "$tmp" && mv "$tmp" "$PROJ_SETTINGS"
@@ -92,7 +92,7 @@ else
   tmp=$(mktemp)
   jq --arg enf "$HOOK_ENFORCE" '
     .hooks //= {} |
-    .hooks.PreToolUse = ([{matcher:"Write",hooks:[{type:"command",command:$enf,timeout:10,statusMessage:"Checking plan format"}]}] + (.hooks.PreToolUse // []))
+    .hooks.PreToolUse = ([{matcher:"Write|Bash",hooks:[{type:"command",command:$enf,timeout:10,statusMessage:"Checking plan format"}]}] + (.hooks.PreToolUse // []))
   ' "$SETTINGS" > "$tmp" && mv "$tmp" "$SETTINGS"
   echo "hooks: wired Write → enforce-html-plans in $SETTINGS"
 fi
