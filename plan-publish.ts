@@ -195,7 +195,12 @@ import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs")
 // HTML-first scaffold: agents WRITE the plan in HTML inside <main>.
 // Theme comes from the current project's DESIGN.md at scaffold time.
 function scaffold(title: string, project: string, date: string, theme: Theme): string {
+  // The two meta tags below are THE CONTRACT the plans-web index reads:
+  //   doc-status: "planned" | "in-progress" | "implemented"  (bump as work lands)
+  //   doc-kind:   "spec" | "plan"                            (move to specs/ + flip to spec)
   return `${htmlHead(title, theme)}
+<meta name="doc-status" content="planned">
+<meta name="doc-kind" content="plan">
 <script src="/assets/highlight.min.js"></script>
 </head><body>
 ${htmlHeader(project, date, Object.keys(theme).length > 0)}

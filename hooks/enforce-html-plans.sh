@@ -9,7 +9,7 @@ TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 
 deny() {
   cat <<'EOF'
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Plans must be written in HTML, not markdown (plans-web rule). Do this instead: 1) scaffold with `plan template \"<Title>\" > <same-dir>/<slug>.html` (themed from the project DESIGN.md), 2) write the plan content as HTML sections inside <main>, 3) run `plan <file>.html` and give the user the URL."}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Superpowers docs (specs, plans, design) must be authored in HTML at docs/superpowers/{specs,plans}/*.html — scaffold with the project's plan template, write HTML sections inside <main>."}}
 EOF
   exit 0
 }
@@ -21,7 +21,7 @@ if [ "$TOOL" = "Bash" ]; then
   case "$CMD" in
     *"$HOME/.claude/plans/"*) exit 0 ;;
   esac
-  if printf '%s' "$CMD" | grep -qE "(>|>>|[[:space:]]tee[[:space:]]+(-a[[:space:]]+)?)[[:space:]]*[\"']?[^[:space:]\"']*(docs/(test-)?plans|\.cursor/plans|\.claude/plans|plans)/[^[:space:]\"']*\.(md|markdown)"; then
+  if printf '%s' "$CMD" | grep -qE "(>|>>|[[:space:]]tee[[:space:]]+(-a[[:space:]]+)?)[[:space:]]*[\"']?[^[:space:]\"']*(docs/superpowers/(specs|plans|design)|docs/(test-)?plans|docs/specs|\.cursor/plans|\.claude/plans|plans|specs)/[^[:space:]\"']*\.(md|markdown)"; then
     deny
   fi
   exit 0
@@ -34,7 +34,7 @@ case "$FP" in
   "$HOME/.claude/plans/"*) exit 0 ;;
 esac
 
-if printf '%s' "$FP" | grep -qiE '(^|/)(docs/(test-)?plans|\.cursor/plans|\.claude/plans|plans)/[^/]+\.(md|markdown)$'; then
+if printf '%s' "$FP" | grep -qiE '(^|/)(docs/superpowers/(specs|plans|design)|docs/(test-)?plans|docs/specs|\.cursor/plans|\.claude/plans|plans|specs)/[^/]+\.(md|markdown)$'; then
   deny
 fi
 exit 0
